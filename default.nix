@@ -1,5 +1,6 @@
 { pkgs, ... }: {
   environment.systemPackages = with pkgs; [
+    bat       # Modern replacement for `cat`
     btop      # Interactive process viewer
     curl      # HTTP requests
     fzf       # Command-line fuzzy finder
@@ -7,6 +8,7 @@
     gnupg     # GNU Pretty Good Privacy (PGP)
     jq        # JSON processor
     lnav      # Curses-based tool for viewing log files
+    thefuck   # Corrects mistyped commands
     vim       # Text editor
     zsh       # Shell
   ];
