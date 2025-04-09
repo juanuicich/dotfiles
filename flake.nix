@@ -22,7 +22,11 @@
       defaultPackages = import ./default.nix;
 
       # Get hostname from the environment
-      hostname = builtins.getEnv "HOSTNAME";
+      hostname = let
+        envHostname = builtins.getEnv "HOSTNAME";
+      in if envHostname != "" 
+         then envHostname 
+         else throw "HOSTNAME environment variable must be set";
 
       # Host-specific configuration - only load if hostname is provided
       hostConfig = if hostname != "" then loadIfExists ./host/${hostname}.nix else {};
@@ -32,7 +36,11 @@
       linuxConfig = loadIfExists ./os/linux.nix;
       
       # Common home-manager configuration
-      username = builtins.getEnv "USER";
+      username = let
+        envUser = builtins.getEnv "USER";
+      in if envUser != ""
+         then envUser
+         else throw "USER environment variable must be set";
       homeManagerConfig = {
         home-manager.useGlobalPkgs = true;
         home-manager.useUserPackages = true;
