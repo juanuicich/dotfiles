@@ -7,7 +7,7 @@ echo "Starting bootstrap process..."
 # 1. Install Nix
 if ! command -v nix >/dev/null 2>&1; then
   echo "Installing Nix..."
-  curl -L https://nixos.org/nix/install | sh
+  curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
   . "$HOME/.nix-profile/etc/profile.d/nix.sh"
 else
   echo "Nix is already installed."
