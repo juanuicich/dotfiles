@@ -1,43 +1,51 @@
 {
-  description = "Example nix-darwin system flake";
+  description = "Modular Nix Flake";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    nix-darwin.url = "github:nix-darwin/nix-darwin/master";
-    nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
+    nixpkgs.url = "github:NixOS/nixpkgs";  # Replace with your preferred nixpkgs version
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs }:
-  let
-    configuration = { pkgs, ... }: {
-      # List packages installed in system profile. To search by name, run:
-      # $ nix-env -qaP | grep wget
-      environment.systemPackages =
-        [ pkgs.vim
-        ];
+  outputs = { self, nixpkgs, ... }:
+    let
+      # Helper function to load a Nix file if it exists
+      loadIfExists = path: if builtins.pathExists path then import path else {};
 
-      # Necessary for using flakes on this system.
-      nix.settings.experimental-features = "nix-command flakes";
+      # Load universal default configuration (default packages)
+      defaultPackages = import ./default.nix;
 
-      # Enable alternative shell support in nix-darwin.
-      # programs.fish.enable = true;
+      # Load OS-specific configuration dynamically
+      os = builtins.getEnv "OSTYPE";  # Detect OS, e.g., "darwin" or "linux"
+      osConfig = loadIfExists ./os/${os}.nix;
 
-      # Set Git commit hash for darwin-version.
-      system.configurationRevision = self.rev or self.dirtyRev or null;
+      # Load host-specific configuration dynamically
+      hostname = builtins.getEnv "HOSTNAME";  # Detect hostname
+      hostConfig = loadIfExists ./hosts/${hostname}.nix;
 
-      # Used for backwards compatibility, please read the changelog before changing.
-      # $ darwin-rebuild changelog
-      system.stateVersion = 6;
+      # Merge configurations
+      mergedConfig = defaultPackages // osConfig // hostConfig;
+    in
+    {
+      # nix-darwin configurations (macOS-specific)
+      darwinConfigurations = {
+        "${hostname}" = nixpkgs.lib.nixosSystem {
+          system = "x86_64-darwin";
+          modules = [ mergedConfig ];
+        };
+      };
 
-      # The platform the configuration will be used on.
-      nixpkgs.hostPlatform = "aarch64-darwin";
+      # nixos configurations (Linux-specific, for x86_64 and aarch64)
+      nixosConfigurations = {
+        # For x86_64 Linux
+        "${hostname}-x86_64" = nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [ mergedConfig ];
+        };
+
+        # For ARM (aarch64) Linux
+        "${hostname}-aarch64" = nixpkgs.lib.nixosSystem {
+          system = "aarch64-linux";
+          modules = [ mergedConfig ];
+        };
+      };
     };
-  in
-  {
-    # Build darwin flake using:
-    # $ darwin-rebuild build --flake .#simple
-    darwinConfigurations."computer" = nix-darwin.lib.darwinSystem {
-      modules = [ configuration ];
-    };
-  };
 }
